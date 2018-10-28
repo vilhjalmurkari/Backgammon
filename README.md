@@ -1,5 +1,5 @@
 # Backgammon
-Skilaverkefni 2 og 3
+Skilaverkefni 2 og 3.
 Backgammon interface for the 2nd and 3rd computational assignments in Computational Intelligence.
 
 ## The board interpretation
