@@ -8,6 +8,25 @@ perceive the board as player 1
 import numpy as np
 import Backgammon
 
+# this function is used to prepare the raw board as input to the network
+# for some games (not here) it may be useful to invert the board and see it from the perspective of "player"
+def one_hot_encoding(board, player):
+    one_hot = []
+    for i in range(1,len(board)):
+        #create a vector with all possible quantities
+        one_hot_place = np.zeros( (2 * 15) + 1 )
+        
+        if(board[i] == 0):    
+            place_in_vector = 0
+        elif (board[i] > 0):
+            place_in_vector = int(board[i])
+        else:
+            place_in_vector = 15 + -1*int(board[i])
+        
+        one_hot_place[place_in_vector] = 1
+        one_hot.extend(one_hot_place)
+    return one_hot
+
 def action(board_copy,dice,player,i):
     # the champion to be
     # inputs are the board, the dice and which player is to move
