@@ -207,6 +207,7 @@ def play_a_game(commentary = False):
     
     # play on
     while not game_over(board) and not check_for_error(board):
+    #for okei in range(1):
         if commentary: print("lets go player ",player)
         
         # roll dice
@@ -218,14 +219,14 @@ def play_a_game(commentary = False):
             board_copy = np.copy(board) 
 
             # make the move (agent vs agent):
-            move = agent.action(board_copy,dice,player,i) 
+            #move = agent.action(board_copy,dice,player,i) 
             
             # if you're playing vs random agent:
-#            if player == 1:
-#                move = agent.action(board_copy,dice,player,i)
-#            elif player == -1:
-#                move = random_agent(board_copy,dice,player,i) 
-            
+            if player == 1:
+                move = agent.action(board_copy,dice,player,i)
+            elif player == -1:
+                move = random_agent(board_copy,dice,player,i) 
+                
             # update the board
             if len(move) != 0:
                 for m in move:
@@ -244,13 +245,19 @@ def play_a_game(commentary = False):
 
 def main():
     winners = {}; winners["1"]=0; winners["-1"]=0; # Collecting stats of the games
-    nGames = 100 # how many games?
+    nGames = 10 # how many games?
+    import time
+    start = time.time()
+    
     for g in range(nGames):
         winner = play_a_game(commentary=False)
         winners[str(winner)] += 1
     print("Out of", nGames, "games,")
     print("player", 1, "won", winners["1"],"times and")
     print("player", -1, "won", winners["-1"],"times")
+    
+    end = time.time()
+    print(end - start)
 
 if __name__ == '__main__':
     main()
