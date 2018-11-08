@@ -50,7 +50,9 @@ def epsilon_nn_greedy(board, possible_moves, possible_boards, player, epsilon,tr
         #print("explorative move")
         return possible_moves[np.random.randint(len(possible_moves))]
     
+    #inntak
     x = Variable(torch.FloatTensor(training_data).type(dtype), requires_grad=False)
+    #úttak
     y = Variable(torch.randn(len(possible_boards), len(possible_boards)).type(dtype), requires_grad=False)
     
     learning_rate = 1e-6
