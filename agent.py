@@ -15,15 +15,21 @@ alpha1 = 0.1
 alpha2 = 0.1
 epsilon = 0.1
 
-
-dtype = torch.FloatTensor
-# dtype = torch.cuda.FloatTensor # Uncomment this to run on GPU
-
 #import time
 #start = time.time()
 #end = time.time()
 #print(end - start)
 
+device = torch.device('cpu')
+# cuda will only create a significant speedup for large/deep networks and batched training
+# device = torch.device('cuda') 
+
+# define the parameters for the single hidden layer feed forward neural network
+# randomly initialized weights with zeros for the biases
+w1 = Variable(torch.randn(28*28,28*31, device = device, dtype=torch.float), requires_grad = True)
+#b1 = Variable(torch.zeros((9*9,1), device = device, dtype=torch.float), requires_grad = True)
+w2 = Variable(torch.randn(1, 28*28, device = device, dtype=torch.float), requires_grad = True)
+#b2 = Variable(torch.zeros((1,1), device = device, dtype=torch.float), requires_grad = True)
 
 # this function is used to prepare the raw board as input to the network
 # for some games (not here) it may be useful to invert the board and see it from the perspective of "player"
@@ -45,54 +51,49 @@ def one_hot_encoding(board, player):
     return one_hot
 
 
-def epsilon_nn_greedy(board, possible_moves, possible_boards, player, epsilon,training_data, w1, w2):
+def epsilon_nn_greedy(board, possible_moves, possible_boards, player, epsilon):
     if (np.random.uniform() < epsilon):
         #print("explorative move")
         return possible_moves[np.random.randint(len(possible_moves))]
+
+    va = np.zeros(len(possible_moves))
     
-    #inntak
-    x = Variable(torch.FloatTensor(training_data).type(dtype), requires_grad=False)
-    #úttak
-    y = Variable(torch.randn(len(possible_boards), len(possible_boards)).type(dtype), requires_grad=False)
+    for i in range(0,len(possible_moves)):
     
-    learning_rate = 1e-6
+        x = Variable(torch.tensor(one_hot_encoding(possible_boards[0], player), dtype = torch.float, device = device)).view(28*31,1)
+        
+        h1 = torch.mm(w1,x)
+        h1 = h1.sigmoid()
+        
+        h2 = torch.mm(w2,h1)
+        
+        y = h2.sigmoid()
+        #print(y_pred)
+        
+        va[i] = y
+        
+    print(va)
     
-    v = []
-    
-    # Forward pass: compute predicted y using operations on Variables; these
-    # are exactly the same operations we used to compute the forward pass using
-    # Tensors, but we do not need to keep references to intermediate values since
-    # we are not implementing the backward pass by hand.
-    y_pred = x.mm(w1).clamp(min=0).mm(w2)
-    #print(y_pred)
-  
-    # Compute and print loss using operations on Variables.
-    # Now loss is a Variable of shape (1,) and loss.data is a Tensor of shape
-    # (1,); loss.data[0] is a scalar value holding the loss.
-    loss = (y_pred - y).pow(2).sum()
-    #print(loss.data[0])
-    
-    # Use autograd to compute the backward pass. This call will compute the
-    # gradient of loss with respect to all Variables with requires_grad=True.
-    # After this call w1.grad and w2.grad will be Variables holding the gradient
-    # of the loss with respect to w1 and w2 respectively.
-    loss.backward()
-    
-    # Update weights using gradient descent; w1.data and w2.data are Tensors,
-    # w1.grad and w2.grad are Variables and w1.grad.data and w2.grad.data are
-    # Tensors.
-    w1.data -= learning_rate * w1.grad.data
-    w2.data -= learning_rate * w2.grad.data
-    
-    # Manually zero the gradients 
-    w1.grad.data.zero_()
-    w2.grad.data.zero_()
-    
-    v = y_pred.data.numpy()
-       
-    final = v[len(v)-1]
-    #print(final)
-    return possible_moves[np.argmax(final)]
+    return possible_moves[np.argmax(va)]
+
+# this function is used to prepare the raw board as input to the network
+# for some games (not here) it may be useful to invert the board and see it from the perspective of "player"
+def one_hot_encoding(board, player):
+    one_hot = []
+    for i in range(1,len(board)):
+        #create a vector with all possible quantities
+        one_hot_place = np.zeros( (2 * 15) + 1 )
+        
+        if(board[i] == 0):    
+            place_in_vector = 0
+        elif (board[i] > 0):
+            place_in_vector = int(board[i])
+        else:
+            place_in_vector = 15 + -1*int(board[i])
+        
+        one_hot_place[place_in_vector] = 1
+        one_hot.extend(one_hot_place)
+    return one_hot
 
 def action(board_copy,dice,player,i):
     # the champion to be
@@ -119,7 +120,7 @@ def action(board_copy,dice,player,i):
     #Backgammon.pretty_print(board_copy)
     #print(len(possible_boards))
     
-    #print(len(possible_moves))
+    print(len(possible_moves))
     #print(one_hot_encoding(board_copy, player))
     #print('_________')
     
@@ -138,15 +139,13 @@ def action(board_copy,dice,player,i):
    # w1 = Variable(torch.randn(D_in, H).type(dtype), requires_grad=True)
    # w2 = Variable(torch.randn(H, D_out).type(dtype), requires_grad=True)
    
-    w1 = Variable(torch.randn(28*31, 28*28).type(dtype), requires_grad=True)
-    w2 = Variable(torch.randn(28*28, len(possible_boards)).type(dtype), requires_grad=True)
+
     
     
-    action = epsilon_nn_greedy(board_copy, possible_moves, possible_boards, player, epsilon, training_data, w1, w2)
-    
-    
+    action = epsilon_nn_greedy(board_copy, possible_moves, possible_boards, player, epsilon)
     
     
     #move = possible_moves[np.random.randint(len(possible_moves))]
-
+    
     return action
+
