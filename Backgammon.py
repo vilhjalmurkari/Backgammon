@@ -201,7 +201,7 @@ def random_agent(board_copy,dice,player,i):
     return move
     
 
-def play_a_game(commentary = False):
+def play_a_game(commentary = False,randomAgent=False):
     board = init_board() # initialize the board
     player = np.random.randint(2)*2-1 # which player begins?
     
@@ -221,11 +221,14 @@ def play_a_game(commentary = False):
             # make the move (agent vs agent):
             #move = agent.action(board_copy,dice,player,i) 
             
-            # if you're playing vs random agent:
-            if player == 1:
-                move = agent.action(board_copy,dice,player,i)
-            elif player == -1:
-                move = random_agent(board_copy,dice,player,i) 
+             #if you're playing vs random agent:
+            if(randomAgent):
+                if player == 1:
+                    move = agent.action(board_copy,dice,player,i)
+                elif player == -1:
+                    move = random_agent(board_copy,dice,player,i)
+            else:
+                 move = agent.action(board_copy,dice,player,i)
                 
             # update the board
             if len(move) != 0:
@@ -239,25 +242,36 @@ def play_a_game(commentary = False):
                 
         # players take turns 
         player = -player
-        
+
+    agent.gameFinishedUpdate(-1*player)
+
         #if(game_over(board)):
          #   pretty_print(board)
-            
     # return the winner
     return -1*player
 
 def main():
     winners = {}; winners["1"]=0; winners["-1"]=0; # Collecting stats of the games
-    nGames = 1 # how many games?
     import time
     start = time.time()
     
-    for g in range(nGames):
-        winner = play_a_game(commentary=False)
-        winners[str(winner)] += 1
-    print("Out of", nGames, "games,")
-    print("player", 1, "won", winners["1"],"times and")
-    print("player", -1, "won", winners["-1"],"times")
+    for a in range(10):
+        print 'Training'
+        for b in range(1000):
+            print b
+            agent.initAgent()
+            play_a_game(commentary=False,randomAgent=True)
+            if b == 1000:
+                print(b)
+        print('Playing against random')
+        nGames = 10 # how many games?
+        for g in range(nGames):
+            agent.initAgent()
+            winner = play_a_game(commentary=False,randomAgent=True)
+            winners[str(winner)] += 1
+        print("Out of", nGames, "games,")
+        print("player", 1, "won", winners["1"],"times and")
+        print("player", -1, "won", winners["-1"],"times")
     
     end = time.time()
     print(end - start)
