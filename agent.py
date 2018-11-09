@@ -20,9 +20,12 @@ epsilon = 0.1
 #end = time.time()
 #print(end - start)
 
-device = torch.device('cpu')
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print(device)
 # cuda will only create a significant speedup for large/deep networks and batched training
-# device = torch.device('cuda') 
+#device = torch.device('cuda') 
+
+
 
 # define the parameters for the single hidden layer feed forward neural network
 # randomly initialized weights with zeros for the biases
@@ -60,7 +63,7 @@ def epsilon_nn_greedy(board, possible_moves, possible_boards, player, epsilon):
     
     for i in range(0,len(possible_moves)):
     
-        x = Variable(torch.tensor(one_hot_encoding(possible_boards[0], player), dtype = torch.float, device = device)).view(28*31,1)
+        x = Variable(torch.tensor(one_hot_encoding(possible_boards[i], player), dtype = torch.float, device = device)).view(28*31,1)
         
         h1 = torch.mm(w1,x)
         h1 = h1.sigmoid()
@@ -72,9 +75,19 @@ def epsilon_nn_greedy(board, possible_moves, possible_boards, player, epsilon):
         
         va[i] = y
         
-    #print(va)
+    print(va)
     
-    return possible_moves[np.argmax(va)]
+    bestMove = np.argmax(va)
+    
+    if(possible_boards[bestMove][27] == 15):
+        reward = 1.0
+        #print(reward)
+    
+    if(possible_boards[bestMove][28] == -15):
+        reward = -1.0
+        #print(reward)
+    
+    return possible_moves[bestMove]
 
 
 def action(board_copy,dice,player,i):
@@ -100,16 +113,12 @@ def action(board_copy,dice,player,i):
     #
     #print('_________')
     #Backgammon.pretty_print(board_copy)
-    #print(len(possible_boards))
+    print(len(possible_boards))
     
     #print(len(possible_moves))
     #print(one_hot_encoding(board_copy, player))
     #print('_________')
     
-    training_data = []
-    for i in range(len(possible_moves)):
-        one_hot = one_hot_encoding(possible_boards[i], player)
-        training_data.append(one_hot)
     
     # N is batch size; D_in is input dimension;
     # H is hidden dimension; D_out is output dimension.
@@ -122,9 +131,8 @@ def action(board_copy,dice,player,i):
    # w2 = Variable(torch.randn(H, D_out).type(dtype), requires_grad=True)
    
 
-    
-    
     action = epsilon_nn_greedy(board_copy, possible_moves, possible_boards, player, epsilon)
+    
     
     
     #move = possible_moves[np.random.randint(len(possible_moves))]

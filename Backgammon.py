@@ -206,8 +206,8 @@ def play_a_game(commentary = False):
     player = np.random.randint(2)*2-1 # which player begins?
     
     # play on
-    while not game_over(board) and not check_for_error(board):
-    #for okei in range(1):
+    #while not game_over(board) and not check_for_error(board):
+    for okei in range(1):
         if commentary: print("lets go player ",player)
         
         # roll dice
@@ -239,13 +239,16 @@ def play_a_game(commentary = False):
                 
         # players take turns 
         player = -player
+        
+        #if(game_over(board)):
+         #   pretty_print(board)
             
     # return the winner
     return -1*player
 
 def main():
     winners = {}; winners["1"]=0; winners["-1"]=0; # Collecting stats of the games
-    nGames = 10 # how many games?
+    nGames = 1 # how many games?
     import time
     start = time.time()
     
