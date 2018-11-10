@@ -8,6 +8,7 @@ perceive the board as player 1
 import numpy as np
 import Backgammon
 import torch
+import flipped_agent
 from torch.autograd import Variable
 
 alpha1 = 0.01
@@ -47,10 +48,10 @@ def initAgent():
 
     # define the parameters for the single hidden layer feed forward neural network
     # randomly initialized weights with zeros for the biases
-    w1 = Variable(torch.randn(28*28,28*31, device = device, dtype=torch.float), requires_grad = True)
-    b1 = Variable(torch.zeros((28*28,1), device = device, dtype=torch.float), requires_grad = True)
-    w2 = Variable(torch.randn(1, 28*28, device = device, dtype=torch.float), requires_grad = True)
-    b2 = Variable(torch.zeros((1,1), device = device, dtype=torch.float), requires_grad = True)
+    #w1 = Variable(torch.randn(28*28,28*31, device = device, dtype=torch.float), requires_grad = True)
+    #b1 = Variable(torch.zeros((28*28,1), device = device, dtype=torch.float), requires_grad = True)
+    #w2 = Variable(torch.randn(1, 28*28, device = device, dtype=torch.float), requires_grad = True)
+    #b2 = Variable(torch.zeros((1,1), device = device, dtype=torch.float), requires_grad = True)
 
     Z_w1 = torch.zeros(w1.size(), device = device, dtype = torch.float)
     Z_b1 = torch.zeros(b1.size(), device = device, dtype = torch.float)
@@ -163,7 +164,7 @@ def action(board_copy,dice,player,i):
         updateNeural(after_state,gamma, lam, alpha1, alpha2)
     #move = possible_moves[np.random.randint(len(possible_moves))]
     actionCount += 1
-
+    #if player == -1: action = flipped_agent.flip_move(action)
     return action
 
 def gameFinishedUpdate(winner):

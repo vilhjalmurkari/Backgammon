@@ -228,7 +228,7 @@ def play_a_game(commentary = False,randomAgent=False):
                 elif player == -1:
                     move = random_agent(board_copy,dice,player,i)
             else:
-                 move = agent.action(board_copy,dice,player,i)
+                move = agent.action(board_copy,dice,player,i)
                 
             # update the board
             if len(move) != 0:
@@ -251,20 +251,33 @@ def play_a_game(commentary = False,randomAgent=False):
     return -1*player
 
 def main():
-    winners = {}; winners["1"]=0; winners["-1"]=0; # Collecting stats of the games
     import time
     start = time.time()
     
-    for a in range(10):
+    for a in range(3):
         print 'Training'
-        for b in range(1000):
-            print b
+        for b in range(40000):
+            #print b
             agent.initAgent()
             play_a_game(commentary=False,randomAgent=True)
-            if b == 1000:
+            if b == 5000:
                 print(b)
+            if b == 10000:
+                print(b)
+            if b == 15000:
+                print(b)
+            if b == 20000:
+                print(b)
+            if b == 25000:
+                print(b)
+            if b == 30000:
+                print(b)
+            if b == 35000:
+                print(b)
+
         print('Playing against random')
-        nGames = 10 # how many games?
+        nGames = 100 # how many games?
+        winners = {}; winners["1"]=0; winners["-1"]=0; # Collecting stats of the games
         for g in range(nGames):
             agent.initAgent()
             winner = play_a_game(commentary=False,randomAgent=True)
