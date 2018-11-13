@@ -8,13 +8,14 @@ perceive the board as player 1
 import numpy as np
 import Backgammon
 import torch
-import flipped_agent
 from torch.autograd import Variable
+from torch import optim
 
 alpha1 = 0.01
 alpha2 = 0.01
-epsilon = 0.1
 lam = 0.4
+
+wtest =[]
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -25,6 +26,7 @@ b1 = Variable(torch.zeros((28*28,1), device = device, dtype=torch.float), requir
 w2 = Variable(torch.randn(1, 28*28, device = device, dtype=torch.float), requires_grad = True)
 b2 = Variable(torch.zeros((1,1), device = device, dtype=torch.float), requires_grad = True)
 
+
 Z_w1 = torch.zeros(w1.size(), device = device, dtype = torch.float)
 Z_b1 = torch.zeros(b1.size(), device = device, dtype = torch.float)
 Z_w2 = torch.zeros(w2.size(), device = device, dtype = torch.float)
@@ -34,15 +36,38 @@ xold = None
 actionCount = 0
 reward = 0
 
+def flip_board(board_copy):
+    #flips the game board and returns a new copy
+    idx = np.array([0,24,23,22,21,20,19,18,17,16,15,14,13,
+    12,11,10,9,8,7,6,5,4,3,2,1,26,25,28,27])
+    flipped_board = -np.copy(board_copy[idx])
+        
+    return flipped_board
+
+def flip_move(move):
+    if len(move)!=0:
+        for m in move:
+            for m_i in range(2):
+                m[m_i] = np.array([0,24,23,22,21,20,19,18,17,16,15,14,13,
+                                12,11,10,9,8,7,6,5,4,3,2,1,26,25,28,27])[m[m_i]]        
+    return move
+
+
 def initAgent():
     global Z_w2,Z_w1,Z_b1,Z_b2,xold,w1,w2,b1,b2,xold,reward,actionCount
     alpha1 = 0.01
     alpha2 = 0.01
-    epsilon = 0.1
     lam = 0.4
     xold = None
     actionCount = 0
     reward = 0
+    
+    #if(g == 0 or g == 999):
+     #   wtest.append(w2)
+        
+    #if(g== 999):
+     #   wtest.append(w2)
+      #  print(wtest[0] == wtest[1])
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -80,11 +105,6 @@ def one_hot_encoding(board):
 
 
 def epsilon_nn_greedy(board, possible_moves, possible_boards, player):
-    global epsilon
-    if (np.random.uniform() < epsilon):
-        #print("explorative move")
-        rand = np.random.randint(len(possible_moves))
-        return possible_boards[rand],possible_moves[rand]
 
     va = np.zeros(len(possible_moves))
     
@@ -108,10 +128,11 @@ def epsilon_nn_greedy(board, possible_moves, possible_boards, player):
     return possible_boards[bestMove],possible_moves[bestMove]
 
 def updateNeural(after_state,gamma, lam, alpha1, alpha2):
-    global Z_w2,Z_w1,Z_b1,Z_b2,xold,w1,w2,b1,b2,epsilon
+    global Z_w2,Z_w1,Z_b1,Z_b2,xold,w1,w2,b1,b2
     # here we have player 2 updating the neural-network (2 layer feed forward with Sigmoid units)
     x = Variable(torch.tensor(one_hot_encoding(after_state), dtype = torch.float, device = device)).view(28*31,1)
     # now do a forward pass to evaluate the new board's after-state value
+    
     h = torch.mm(w1,x) + b1 # matrix-multiply x with input weight w1 and add bias
     h_sigmoid = h.sigmoid() # squash this with a sigmoid function
     y = torch.mm(w2,h_sigmoid) + b2 # multiply with the output weights w2 and add bias
@@ -145,9 +166,17 @@ def updateNeural(after_state,gamma, lam, alpha1, alpha2):
 def action(board_copy,dice,player,i):
     global actionCount
     gamma = 1
-    # check out the legal moves available for the throw
-    possible_moves, possible_boards = Backgammon.legal_moves(board_copy, dice, player)
     
+    # starts by flipping the board so that the player always sees himself as player 1
+    if player == -1: 
+        board_copy = flip_board(board_copy)
+        possible_moves, possible_boards = Backgammon.legal_moves(board_copy, dice, player=1)
+    else:
+        # check out the legal moves available for the throw
+        possible_moves, possible_boards = Backgammon.legal_moves(board_copy, dice, player)
+
+    
+        
     # if there are no moves available
     if len(possible_moves) == 0: 
         return [] 
@@ -157,18 +186,22 @@ def action(board_copy,dice,player,i):
 
     after_state,action = epsilon_nn_greedy(board_copy, possible_moves, possible_boards, player)
     
-    global xold
-    xold = Variable(torch.tensor(one_hot_encoding(after_state), dtype=torch.float, device = device)).view((28*31,1))
     #print('actionCount:',actionCount)
     if(actionCount > 0):
         updateNeural(after_state,gamma, lam, alpha1, alpha2)
     #move = possible_moves[np.random.randint(len(possible_moves))]
+    #return move
     actionCount += 1
-    #if player == -1: action = flipped_agent.flip_move(action)
+    
+    global xold
+    xold = Variable(torch.tensor(one_hot_encoding(after_state), dtype=torch.float, device = device)).view((28*31,1))
+    
+    
+    if player == -1: action = flip_move(action)
     return action
 
 def gameFinishedUpdate(winner):
-    global Z_w2,Z_w1,Z_b1,Z_b2,xold,w1,w2,b1,b2,epsilon
+    global Z_w2,Z_w1,Z_b1,Z_b2,xold,w1,w2,b1,b2
     reward = 1 if winner == 1 else 0
     #print('Game over reward:',reward)
     if actionCount > 1:
@@ -190,12 +223,17 @@ def gameFinishedUpdate(winner):
         b2.grad.data.zero_()
         w1.grad.data.zero_()
         b1.grad.data.zero_()
+
         # perform now the update of weights
         delta2 =  torch.tensor(delta2, dtype = torch.float, device = device)
+
         w1.data = w1.data + alpha1 * delta2 * Z_w1
         b1.data = b1.data + alpha1 * delta2 * Z_b1
         w2.data = w2.data + alpha2 * delta2 * Z_w2
         b2.data = b2.data + alpha2 * delta2 * Z_b2
+
+        
+        
 
     #device = torch.device('cuda') 
 

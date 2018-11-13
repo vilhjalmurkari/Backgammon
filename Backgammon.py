@@ -10,7 +10,8 @@ so make sure your changes here won't affect his performance.
 """
 import numpy as np
 import agent
-# import flipped_agent 
+import flipped_agent 
+import matplotlib.pyplot as plt
 
 def init_board():
     # initializes the game board
@@ -205,9 +206,11 @@ def play_a_game(commentary = False,randomAgent=False):
     board = init_board() # initialize the board
     player = np.random.randint(2)*2-1 # which player begins?
     
+    #pretty_print(board)
+    
     # play on
     while not game_over(board) and not check_for_error(board):
-    #for okei in range(1):
+    #for okei in range(2):
         if commentary: print("lets go player ",player)
         
         # roll dice
@@ -219,7 +222,7 @@ def play_a_game(commentary = False,randomAgent=False):
             board_copy = np.copy(board) 
 
             # make the move (agent vs agent):
-            #move = agent.action(board_copy,dice,player,i) 
+            #move = agent.action(board_copy,dice,player,i)
             
              #if you're playing vs random agent:
             if(randomAgent):
@@ -250,41 +253,38 @@ def play_a_game(commentary = False,randomAgent=False):
     # return the winner
     return -1*player
 
+data = []
+
 def main():
     import time
     start = time.time()
     
-    for a in range(3):
-        print 'Training'
-        for b in range(40000):
-            #print b
+    for a in range(50):
+        startA = time.time()
+        print('Training')
+        for b in range(50):
+            if(b % 10 == 0):
+                print(b)
             agent.initAgent()
-            play_a_game(commentary=False,randomAgent=True)
-            if b == 5000:
-                print(b)
-            if b == 10000:
-                print(b)
-            if b == 15000:
-                print(b)
-            if b == 20000:
-                print(b)
-            if b == 25000:
-                print(b)
-            if b == 30000:
-                print(b)
-            if b == 35000:
-                print(b)
+            play_a_game(commentary=False,randomAgent=False)
+            
 
         print('Playing against random')
-        nGames = 100 # how many games?
+        nGames = 50 # how many games?
         winners = {}; winners["1"]=0; winners["-1"]=0; # Collecting stats of the games
         for g in range(nGames):
+            if(g % 10 == 0):
+                print('playing Random', g)
             agent.initAgent()
             winner = play_a_game(commentary=False,randomAgent=True)
             winners[str(winner)] += 1
+        
+        data.append(winners["1"])
         print("Out of", nGames, "games,")
         print("player", 1, "won", winners["1"],"times and")
         print("player", -1, "won", winners["-1"],"times")
+        endA = time.time()
+        print("tími á run nr. ", a, ' tók:', (endA-startA), " sec")
     
     end = time.time()
     print(end - start)
@@ -293,4 +293,5 @@ if __name__ == '__main__':
     main()
     
     
+plt.plot(range(len(data)), data, 'r')
 
