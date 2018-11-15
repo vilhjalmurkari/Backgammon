@@ -11,10 +11,11 @@ so make sure your changes here won't affect his performance.
 import numpy as np
 import agent
 import torch
+import Model
 from torch.autograd import Variable
 import flipped_agent 
 import matplotlib.pyplot as plt
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 def init_board():
     # initializes the game board
     board = np.zeros(29)
@@ -204,15 +205,17 @@ def random_agent(board_copy,dice,player,i):
     return move
     
 
-def play_a_game(xold,w1,w2,b1,b2,commentary = False,randomAgent=False):
+def play_a_game(model,commentary = False,randomAgent=False):
     board = init_board() # initialize the board
     player = np.random.randint(2)*2-1 # which player begins?
-    Z_w1 = torch.zeros(w1.size(), device = device, dtype = torch.float)
-    Z_b1 = torch.zeros(b1.size(), device = device, dtype = torch.float)
-    Z_w2 = torch.zeros(w2.size(), device = device, dtype = torch.float)
-    Z_b2 = torch.zeros(b2.size(), device = device, dtype = torch.float)
+    '''
+    model.Z_w1 = torch.zeros(model.w1.size(), device = model.device, dtype = torch.float)
+    model.Z_b1 = torch.zeros(model.b1.size(), device = model.device, dtype = torch.float)
+    model.Z_w2 = torch.zeros(model.w2.size(), device = model.device, dtype = torch.float)
+    model.Z_b2 = torch.zeros(model.b2.size(), device = model.device, dtype = torch.float)
+    '''
+
     #pretty_print(board)
-    
     # play on
     while not game_over(board) and not check_for_error(board):
     #for okei in range(2):
@@ -231,11 +234,11 @@ def play_a_game(xold,w1,w2,b1,b2,commentary = False,randomAgent=False):
              #if you're playing vs random agent:
             if(randomAgent):
                 if player == 1:
-                    move = agent.action(board_copy,dice,player,i,Z_w1,Z_w2,Z_b1,Z_b2,w1,w2,b1,b2,xold)
+                    move = agent.action(board_copy,dice,player,i,model)
                 elif player == -1:
                     move = random_agent(board_copy,dice,player,i)
             else:
-                move = agent.action(board_copy,dice,player,i,Z_w1,Z_w2,Z_b1,Z_b2,w1,w2,b1,b2,xold)
+                move = agent.action(board_copy,dice,player,i,model)
                 
             # update the board
             if len(move) != 0:
@@ -250,7 +253,7 @@ def play_a_game(xold,w1,w2,b1,b2,commentary = False,randomAgent=False):
         # players take turns 
         player = -player
 
-    agent.gameFinishedUpdate(-1*player,Z_w1,Z_w2,Z_b1,Z_b2,w1,w2,b1,b2,xold)
+    model.gameFinishedUpdate(-1*player)
 
         #if(game_over(board)):
          #   pretty_print(board)
@@ -261,20 +264,15 @@ data = []
 
 def main():
     import time
-
     start = time.time()
-    xold = Variable(torch.tensor(torch.zeros(868,1), dtype=torch.float, device = device)).view((28*31,1))
-    w1 = Variable(torch.randn(28*28,28*31, device = device, dtype=torch.float), requires_grad = True)
-    b1 = Variable(torch.zeros((28*28,1), device = device, dtype=torch.float), requires_grad = True)
-    w2 = Variable(torch.randn(1, 28*28, device = device, dtype=torch.float), requires_grad = True)
-    b2 = Variable(torch.zeros((1,1), device = device, dtype=torch.float), requires_grad = True)
+    model = Model.Model()
     for a in range(50):
         startA = time.time()
         print('Training')
         for b in range(50):
-            print(b)
-            play_a_game(xold,w1,w2,b1,b2,commentary=False,randomAgent=False)
-            
+            #if b%10==0:
+            #    print(b)
+            play_a_game(model,commentary=False,randomAgent=True)
 
         print('Playing against random')
         nGames = 50 # how many games?
@@ -282,7 +280,7 @@ def main():
         for g in range(nGames):
             if(g % 10 == 0):
                 print('playing Random', g)
-            winner = play_a_game(xold,w1,w2,b1,b2,commentary=False,randomAgent=True)
+            winner = play_a_game(model,commentary=False,randomAgent=True)
             winners[str(winner)] += 1
         
         data.append(winners["1"])
@@ -294,10 +292,8 @@ def main():
     
     end = time.time()
     print(end - start)
+    plt.plot(range(len(data)), data, 'r')
+    plt.show()
 
 if __name__ == '__main__':
     main()
-    
-    
-plt.plot(range(len(data)), data, 'r')
-

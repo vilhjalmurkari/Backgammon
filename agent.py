@@ -11,13 +11,7 @@ import torch
 from torch.autograd import Variable
 from torch import optim
 
-alpha1 = 0.01
-alpha2 = 0.01
-lam = 0.4
-
 wtest =[]
-
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 actionCount = 0
 reward = 0
@@ -59,68 +53,21 @@ def one_hot_encoding(board):
     return one_hot
 
 
-def epsilon_nn_greedy(board, possible_moves, possible_boards, player,w1,w2,b1,b2):
-
+def epsilon_nn_greedy(board, possible_moves, possible_boards, player,model):
     va = np.zeros(len(possible_moves))
-    
     for i in range(0,len(possible_moves)):
-        #print(i)
-        x = Variable(torch.tensor(one_hot_encoding(possible_boards[i]), dtype = torch.float, device = device)).view(28*31,1)
-        
-        h1 = torch.mm(w1,x)
-        h1 = h1.sigmoid()
-        
-        h2 = torch.mm(w2,h1)
-        
-        y = h2.sigmoid()
-        #print(y_pred)
-        
-        va[i] = y
-        
-    #print(va)
+        x = Variable(torch.tensor(one_hot_encoding(possible_boards[i]), dtype = torch.float, device = model.device)).view(28*31,1)
+        h = torch.mm(model.w1,x) + model.b1
+        h_sigmoid = h.sigmoid()
+        y = torch.mm(model.w2,h_sigmoid)+ model.b2
+        y_sigmoid = y.sigmoid()
+        va[i] = y_sigmoid
     
     bestMove = np.argmax(va)
     return possible_boards[bestMove],possible_moves[bestMove]
 
-def updateNeural(after_state,gamma, lam, alpha1, alpha2,Z_w1,Z_w2,Z_b1,Z_b2,w1,w2,b1,b2,xold):
-    # here we have player 2 updating the neural-network (2 layer feed forward with Sigmoid units)
-    x = Variable(torch.tensor(one_hot_encoding(after_state), dtype = torch.float, device = device)).view(28*31,1)
-    # now do a forward pass to evaluate the new board's after-state value
-    
-    h = torch.mm(w1,x) + b1 # matrix-multiply x with input weight w1 and add bias
-    h_sigmoid = h.sigmoid() # squash this with a sigmoid function
-    y = torch.mm(w2,h_sigmoid) + b2 # multiply with the output weights w2 and add bias
-    y_sigmoid = y.sigmoid() # squash this with a sigmoid function
-    target = y_sigmoid.detach().cpu().numpy()
-    # lets also do a forward past for the old board, this is the state we will update
-    h = torch.mm(w1,xold) + b1 # matrix-multiply x with input weight w1 and add bias
-    h_sigmoid = h.sigmoid() # squash this with a sigmoid function
-    y = torch.mm(w2,h_sigmoid) + b2 # multiply with the output weights w2 and add bias
-    y_sigmoid = y.sigmoid() # squash the output
-    delta2 = 0 + gamma * target - y_sigmoid.detach().cpu().numpy() # this is the usual TD error
-    # using autograd and the contructed computational graph in pytorch compute all gradients
-    y_sigmoid.backward()
-    # update the eligibility traces using the gradients
-    Z_w2 = gamma * lam * Z_w2 + w2.grad.data
-    Z_b2 = gamma * lam * Z_b2 + b2.grad.data
-    Z_w1 = gamma * lam * Z_w1 + w1.grad.data
-    Z_b1 = gamma * lam * Z_b1 + b1.grad.data
-    # zero the gradients
-    w2.grad.data.zero_()
-    b2.grad.data.zero_()
-    w1.grad.data.zero_()
-    b1.grad.data.zero_()
-    # perform now the update for the weights
-    delta2 =  torch.tensor(delta2, dtype = torch.float, device = device)
-    w1.data = w1.data + alpha1 * delta2 * Z_w1
-    b1.data = b1.data + alpha1 * delta2 * Z_b1
-    w2.data = w2.data + alpha2 * delta2 * Z_w2
-    b2.data = b2.data + alpha2 * delta2 * Z_b2
-
-def action(board_copy,dice,player,i,Z_w1,Z_w2,Z_b1,Z_b2,w1,w2,b1,b2,xold):
+def action(board_copy,dice,player,i,model):
     global actionCount
-    gamma = 1
-    
     # starts by flipping the board so that the player always sees himself as player 1
     if player == -1: 
         board_copy = flip_board(board_copy)
@@ -129,68 +76,24 @@ def action(board_copy,dice,player,i,Z_w1,Z_w2,Z_b1,Z_b2,w1,w2,b1,b2,xold):
         # check out the legal moves available for the throw
         possible_moves, possible_boards = Backgammon.legal_moves(board_copy, dice, player)
 
-    
-        
     # if there are no moves available
     if len(possible_moves) == 0: 
         return [] 
-    
-    #Backgammon.pretty_print(board_copy)
-    #print(len(possible_boards))
 
-    after_state,action = epsilon_nn_greedy(board_copy, possible_moves, possible_boards, player,w1,w2,b1,b2)
-    
+    #Backgammon.pretty_print(board_copy)
+
+    after_state,action = epsilon_nn_greedy(board_copy, possible_moves, possible_boards, player,model)
+
     #print('actionCount:',actionCount)
     if(actionCount > 0):
-        updateNeural(after_state,gamma, lam, alpha1, alpha2,Z_w1,Z_w2,Z_b1,Z_b2,w1,w2,b1,b2,xold)
-    #move = possible_moves[np.random.randint(len(possible_moves))]
+        model.updateNeural(after_state)
+    
     #return move
     actionCount += 1
 
-    xold = Variable(torch.tensor(one_hot_encoding(after_state), dtype=torch.float, device = device)).view((28*31,1))
-    
-    
+    model.xold = Variable(torch.tensor(one_hot_encoding(after_state), dtype=torch.float, device = model.device)).view((28*31,1))
+
     if player == -1: action = flip_move(action)
+    
     return action
 
-def gameFinishedUpdate(winner,Z_w1,Z_w2,Z_b1,Z_b2,w1,w2,b1,b2,xold):
-    reward = 1 if winner == 1 else 0
-    #print('Game over reward:',reward)
-    if actionCount > 1:
-        gamma = 1
-        h = torch.mm(w1,xold) + b1 # matrix-multiply x with input weight w1 and add bias
-        h_sigmoid = h.sigmoid() # squash this with a sigmoid function
-        y = torch.mm(w2,h_sigmoid) + b2 # multiply with the output weights w2 and add bias
-        y_sigmoid = y.sigmoid() # squash the output
-        delta2 = reward + gamma * 0 - y_sigmoid.detach().cpu().numpy()  # this is the usual TD error
-        # using autograd and the contructed computational graph in pytorch compute all gradients
-        y_sigmoid.backward()
-        # update the eligibility traces
-        Z_w2 = gamma * lam * Z_w2 + w2.grad.data
-        Z_b2 = gamma * lam * Z_b2 + b2.grad.data
-        Z_w1 = gamma * lam * Z_w1 + w1.grad.data
-        Z_b1 = gamma * lam * Z_b1 + b1.grad.data
-        # zero the gradients
-        w2.grad.data.zero_()
-        b2.grad.data.zero_()
-        w1.grad.data.zero_()
-        b1.grad.data.zero_()
-
-        # perform now the update of weights
-        delta2 =  torch.tensor(delta2, dtype = torch.float, device = device)
-
-        w1.data = w1.data + alpha1 * delta2 * Z_w1
-        b1.data = b1.data + alpha1 * delta2 * Z_b1
-        w2.data = w2.data + alpha2 * delta2 * Z_w2
-        b2.data = b2.data + alpha2 * delta2 * Z_b2
-
-        
-        
-
-    #device = torch.device('cuda') 
-
-    #import time
-    #start = time.time()
-    #training_steps = 40000
-    #end = time.time()
-    #print(end - start)
