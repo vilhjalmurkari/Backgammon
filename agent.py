@@ -55,26 +55,26 @@ def one_hot_encoding(board):
 
 def epsilon_nn_greedy(board, possible_moves, possible_boards, player,model):
     va = np.zeros(len(possible_moves))
+    xa = np.zeros((len(possible_moves),868))
     for i in range(0,len(possible_moves)):
-        x = Variable(torch.tensor(one_hot_encoding(possible_boards[i]), dtype = torch.float, device = model.device)).view(28*31,1)
-        h = torch.mm(model.w1,x) + model.b1
-        h_sigmoid = h.sigmoid()
-        y = torch.mm(model.w2,h_sigmoid)+ model.b2
-        y_sigmoid = y.sigmoid()
-        va[i] = y_sigmoid
-    
+        xa[i,:] = one_hot_encoding(possible_boards[i])
+    x = Variable(torch.tensor(xa.transpose(), dtype = torch.float, device = model.device))
+    h = torch.mm(model.w1,x) + model.b1
+    h_sigmoid = h.sigmoid()
+    #pi = torch.mm(theta,h_sigmoid).softmax(1)
+    #xtheta_mean = torch.sum(torch.mm(h_sigmoid,torch.diagflat(pi)),1)
+    #xtheta_mean = torch.unsqueeze(xtheta_mean,1)
+    #m = torch.multinomial(pi,1)
+    y = torch.mm(model.w2,h_sigmoid)+ model.b2
+    va = y.sigmoid().detach().cpu()
     bestMove = np.argmax(va)
     return possible_boards[bestMove],possible_moves[bestMove]
 
 def action(board_copy,dice,player,i,model):
     global actionCount
-    # starts by flipping the board so that the player always sees himself as player 1
-    if player == -1: 
-        board_copy = flip_board(board_copy)
-        possible_moves, possible_boards = Backgammon.legal_moves(board_copy, dice, player=1)
-    else:
-        # check out the legal moves available for the throw
-        possible_moves, possible_boards = Backgammon.legal_moves(board_copy, dice, player)
+
+    # check out the legal moves available for the throw
+    possible_moves, possible_boards = Backgammon.legal_moves(board_copy, dice, player)
 
     # if there are no moves available
     if len(possible_moves) == 0: 
@@ -83,17 +83,13 @@ def action(board_copy,dice,player,i,model):
     #Backgammon.pretty_print(board_copy)
 
     after_state,action = epsilon_nn_greedy(board_copy, possible_moves, possible_boards, player,model)
-
-    #print('actionCount:',actionCount)
+    #model.xtheta = xtheta_mean
     if(actionCount > 0):
         model.updateNeural(after_state)
-    
-    #return move
+
     actionCount += 1
 
     model.xold = Variable(torch.tensor(one_hot_encoding(after_state), dtype=torch.float, device = model.device)).view((28*31,1))
-
-    if player == -1: action = flip_move(action)
     
     return action
 

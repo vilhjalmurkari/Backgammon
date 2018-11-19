@@ -10,6 +10,7 @@ so make sure your changes here won't affect his performance.
 """
 import numpy as np
 import agent
+import flipped_agent
 import torch
 import Model
 from torch.autograd import Variable
@@ -205,15 +206,19 @@ def random_agent(board_copy,dice,player,i):
     return move
     
 
-def play_a_game(model,commentary = False,randomAgent=False):
+def play_a_game(modelPlayer,modelPlayerOne,modelPlayerOther,commentary = False,randomAgent=False):
     board = init_board() # initialize the board
     player = np.random.randint(2)*2-1 # which player begins?
-    '''
-    model.Z_w1 = torch.zeros(model.w1.size(), device = model.device, dtype = torch.float)
-    model.Z_b1 = torch.zeros(model.b1.size(), device = model.device, dtype = torch.float)
-    model.Z_w2 = torch.zeros(model.w2.size(), device = model.device, dtype = torch.float)
-    model.Z_b2 = torch.zeros(model.b2.size(), device = model.device, dtype = torch.float)
-    '''
+    
+    modelPlayerOne.Z_w1 = torch.zeros(modelPlayerOne.w1.size(), device = modelPlayerOne.device, dtype = torch.float)
+    modelPlayerOne.Z_b1 = torch.zeros(modelPlayerOne.b1.size(), device = modelPlayerOne.device, dtype = torch.float)
+    modelPlayerOne.Z_w2 = torch.zeros(modelPlayerOne.w2.size(), device = modelPlayerOne.device, dtype = torch.float)
+    modelPlayerOne.Z_b2 = torch.zeros(modelPlayerOne.b2.size(), device = modelPlayerOne.device, dtype = torch.float)
+    
+    modelPlayerOther.Z_w1 = torch.zeros(modelPlayerOther.w1.size(), device = modelPlayerOther.device, dtype = torch.float)
+    modelPlayerOther.Z_b1 = torch.zeros(modelPlayerOther.b1.size(), device = modelPlayerOther.device, dtype = torch.float)
+    modelPlayerOther.Z_w2 = torch.zeros(modelPlayerOther.w2.size(), device = modelPlayerOther.device, dtype = torch.float)
+    modelPlayerOther.Z_b2 = torch.zeros(modelPlayerOther.b2.size(), device = modelPlayerOther.device, dtype = torch.float)
 
     #pretty_print(board)
     # play on
@@ -234,11 +239,17 @@ def play_a_game(model,commentary = False,randomAgent=False):
              #if you're playing vs random agent:
             if(randomAgent):
                 if player == 1:
-                    move = agent.action(board_copy,dice,player,i,model)
+                    if(modelPlayer == 1):
+                        move = agent.action(board_copy,dice,player,i,modelPlayerOne)
+                    else:
+                        move = agent.action(board_copy,dice,player,i,modelPlayerOther)
                 elif player == -1:
                     move = random_agent(board_copy,dice,player,i)
             else:
-                move = agent.action(board_copy,dice,player,i,model)
+                if player == 1:
+                    move = agent.action(board_copy,dice,player,i,modelPlayerOne)
+                elif player == -1:
+                    move = flipped_agent.action(board_copy,dice,player,i,modelPlayerOther)
                 
             # update the board
             if len(move) != 0:
@@ -253,8 +264,8 @@ def play_a_game(model,commentary = False,randomAgent=False):
         # players take turns 
         player = -player
 
-    model.gameFinishedUpdate(-1*player)
-
+    modelPlayerOne.gameFinishedUpdate(-1*player)
+    modelPlayerOther.gameFinishedUpdate(-1*player)
         #if(game_over(board)):
          #   pretty_print(board)
     # return the winner
@@ -265,24 +276,38 @@ data = []
 def main():
     import time
     start = time.time()
-    model = Model.Model()
-    for a in range(50):
+    modelPlayerOne = Model.Model(1,False,50,0.4)
+    modelPlayerOther = Model.Model(-1,False,50,0.7)
+    totalTrained = 0
+    for a in range(10):
         startA = time.time()
         print('Training')
-        for b in range(50):
-            #if b%10==0:
-            #    print(b)
-            play_a_game(model,commentary=False,randomAgent=True)
-
+        if a > 0:
+            modelPlayerOne.gamesWon = 0
+            modelPlayerOther.gamesWon = 0
+            for b in range(1000):
+                totalTrained += 1
+                if(b%10 ==0):
+                    print(b)
+                    print('Player One',modelPlayerOne.gamesWon)
+                    print('Other Player',modelPlayerOther.gamesWon)
+                play_a_game(1,modelPlayerOne,modelPlayerOther,commentary=False,randomAgent=False)
+            torch.save(modelPlayerOne.w1, './trainedWeights/w1_trained_'+str(totalTrained)+'.pth')
+            torch.save(modelPlayerOne.w2, './trainedWeights/w2_trained_'+str(totalTrained)+'.pth')
+            torch.save(modelPlayerOne.b1, './trainedWeights/b1_trained_'+str(totalTrained)+'.pth')
+            torch.save(modelPlayerOne.b2, './trainedWeights/b2_trained_'+str(totalTrained)+'.pth')
         print('Playing against random')
-        nGames = 50 # how many games?
+        nGames = 100 # how many games?
         winners = {}; winners["1"]=0; winners["-1"]=0; # Collecting stats of the games
         for g in range(nGames):
             if(g % 10 == 0):
                 print('playing Random', g)
-            winner = play_a_game(model,commentary=False,randomAgent=True)
+            if(modelPlayerOne.gamesWon > modelPlayerOther.gamesWon):    
+                winner = play_a_game(1,modelPlayerOne,modelPlayerOther,commentary=False,randomAgent=True)
+            else:
+                winner = play_a_game(0,modelPlayerOne,modelPlayerOther,commentary=False,randomAgent=True)
+
             winners[str(winner)] += 1
-        
         data.append(winners["1"])
         print("Out of", nGames, "games,")
         print("player", 1, "won", winners["1"],"times and")
