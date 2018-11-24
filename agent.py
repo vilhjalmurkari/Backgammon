@@ -75,7 +75,7 @@ def action(board_copy,dice,player,i,model):
 
     # check out the legal moves available for the throw
     possible_moves, possible_boards = Backgammon.legal_moves(board_copy, dice, player)
-
+    print(possible_boards[0])
     # if there are no moves available
     if len(possible_moves) == 0: 
         return [] 

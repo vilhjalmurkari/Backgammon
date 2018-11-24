@@ -4,13 +4,17 @@ from torch.autograd import Variable
 import agent
 
 class Model:
-    def __init__(self,_player,useTrained,loadtrainstep,_lambda):
+    def __init__(self,_player,useTrained,loadtrainstep,_lambda,_alpha):
         self.device = torch.device('cpu') #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         if useTrained:
-            self.w1 = torch.load('./trainedWeights/w1_trained_'+str(loadtrainstep)+'.pth')
-            self.w2 = torch.load('./trainedWeights/w2_trained_'+str(loadtrainstep)+'.pth')
-            self.b1 = torch.load('./trainedWeights/b1_trained_'+str(loadtrainstep)+'.pth')
-            self.b2 = torch.load('./trainedWeights/b2_trained_'+str(loadtrainstep)+'.pth')
+            #self.w1 = torch.load('./trainedWeights/w1_trained_'+str(loadtrainstep)+'.pth')
+            #self.w2 = torch.load('./trainedWeights/w2_trained_'+str(loadtrainstep)+'.pth')
+            #self.b1 = torch.load('./trainedWeights/b1_trained_'+str(loadtrainstep)+'.pth')
+            #self.b2 = torch.load('./trainedWeights/b2_trained_'+str(loadtrainstep)+'.pth')
+            #self.w1 = torch.load('./trainedWeights/w1_trained_'+'-'+str(loadtrainstep)+'_player_'+str(_player)+'-'+'lam'+str(_lambda)+'alpha'+str(_alpha)+'.pth')
+            #self.w2 = torch.load('./trainedWeights/w2_trained_'+'-'+str(loadtrainstep)+'_player_'+str(_player)+'-'+'lam'+str(_lambda)+'alpha'+str(_alpha)+'.pth')
+            #self.b1 = torch.load('./trainedWeights/b1_trained_'+'-'+str(loadtrainstep)+'_player_'+str(_player)+'-'+'lam'+str(_lambda)+'alpha'+str(_alpha)+'.pth')
+            #self.b2 = torch.load('./trainedWeights/b2_trained_'+'-'+str(loadtrainstep)+'_player_'+str(_player)+'-'+'lam'+str(_lambda)+'alpha'+str(_alpha)+'.pth')
         else:
             self.w1 = Variable(0.001*torch.randn(40,28*31, device = self.device, dtype=torch.float), requires_grad = True)
             self.b1 = Variable(torch.zeros((40,1), device = self.device, dtype=torch.float), requires_grad = True)
@@ -18,8 +22,8 @@ class Model:
             self.b2 = Variable(torch.zeros((1,1), device = self.device, dtype=torch.float), requires_grad = True)
         self.gamesWon = 0
         self.player = _player
-        self.alpha1 = 0.001
-        self.alpha2 = 0.001
+        self.alpha1 = _alpha
+        self.alpha2 = _alpha
         self.lam = _lambda
         self.xold = Variable(torch.tensor(torch.zeros(868,1), dtype=torch.float, device = self.device)).view(28*31,1)
         self.Z_w1 = torch.zeros(self.w1.size(), device = self.device, dtype = torch.float)
@@ -108,3 +112,10 @@ class Model:
         grad_ln_pi = h_sigmoid - self.xtheta
         self.theta.data = self.theta.data + self.alpha_th*delta2*grad_ln_pi
         
+
+    def saveNetwork(self,totalTrained):
+        torch.save(self.w1, /.sn       i8y64tv5tt6cgt''./trainedWeights/w1_trained_'+'-'+str(loadtrainstep)+'_player_'+str(_player)+'-'+'lam'+str(_lambda)+'alpha'+str(_alpha)+'.pth'+str(self.player)+'-'+'lam'+str(self.lam)+'alpha'+str(self.alpha1)+'.pth')
+        torch.save(self.w2, './trainedWeights/w2_trained_'+str(totalTrained)+'_player_'+str(self.player)+'-'+'lam'+str(self.lam)+'alpha'+str(self.alpha1)+'.pth')
+        torch.save(self.b1, './trainedWeights/b1_trained_'+str(totalTrained)+'_player_'+str(self.player)+'-'+'lam'+str(self.lam)+'alpha'+str(self.alpha1)+'.pth')
+        torch.save(self.b2, './trainedWeights/b2_trained_'+str(totalTrained)+'_player_'+str(self.player)+'-'+'lam'+str(self.lam)+'alpha'+str(self.alpha1)+'.pth')
+    

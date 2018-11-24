@@ -271,53 +271,58 @@ def play_a_game(modelPlayer,modelPlayerOne,modelPlayerOther,commentary = False,r
     # return the winner
     return -1*player
 
-data = []
-
+dataP1 = []
+dataP2 = []
 def main():
     import time
     start = time.time()
-    modelPlayerOne = Model.Model(1,False,50,0.4)
-    modelPlayerOther = Model.Model(-1,False,50,0.7)
+    modelPlayerOne = Model.Model(1,True,14000,0.9,0.001)
+    modelPlayerOther = Model.Model(-1,True,14000,0.9,0.001)
     totalTrained = 0
-    for a in range(10):
+    for a in range(50):
         startA = time.time()
         print('Training')
         if a > 0:
             modelPlayerOne.gamesWon = 0
             modelPlayerOther.gamesWon = 0
             for b in range(1000):
+                if(b%100 == 0):
+                    print b
                 totalTrained += 1
-                if(b%10 ==0):
-                    print(b)
-                    print('Player One',modelPlayerOne.gamesWon)
-                    print('Other Player',modelPlayerOther.gamesWon)
                 play_a_game(1,modelPlayerOne,modelPlayerOther,commentary=False,randomAgent=False)
-            torch.save(modelPlayerOne.w1, './trainedWeights/w1_trained_'+str(totalTrained)+'.pth')
-            torch.save(modelPlayerOne.w2, './trainedWeights/w2_trained_'+str(totalTrained)+'.pth')
-            torch.save(modelPlayerOne.b1, './trainedWeights/b1_trained_'+str(totalTrained)+'.pth')
-            torch.save(modelPlayerOne.b2, './trainedWeights/b2_trained_'+str(totalTrained)+'.pth')
-        print('Playing against random')
+            modelPlayerOne.saveNetwork(totalTrained)
+            modelPlayerOther.saveNetwork(totalTrained)
+            print('Player One',modelPlayerOne.gamesWon)
+            print('Other Player',modelPlayerOther.gamesWon)
         nGames = 100 # how many games?
         winners = {}; winners["1"]=0; winners["-1"]=0; # Collecting stats of the games
-        for g in range(nGames):
-            if(g % 10 == 0):
-                print('playing Random', g)
-            if(modelPlayerOne.gamesWon > modelPlayerOther.gamesWon):    
-                winner = play_a_game(1,modelPlayerOne,modelPlayerOther,commentary=False,randomAgent=True)
-            else:
-                winner = play_a_game(0,modelPlayerOne,modelPlayerOther,commentary=False,randomAgent=True)
-
+        print('Player One playing against random...')
+        for g in range(nGames):   
+            winner = play_a_game(1,modelPlayerOne,modelPlayerOther,commentary=False,randomAgent=True)
             winners[str(winner)] += 1
-        data.append(winners["1"])
+        dataP1.append(winners["1"])
         print("Out of", nGames, "games,")
-        print("player", 1, "won", winners["1"],"times and")
-        print("player", -1, "won", winners["-1"],"times")
+        print("playerOne", 1, "won", winners["1"],"times and")
+        print("Random", -1, "won", winners["-1"],"times")
         endA = time.time()
-        print("tími á run nr. ", a, ' tók:', (endA-startA), " sec")
+        print("timi a run nr. ", a, ' tok:', (endA-startA), " sec")
+        nGames = 100 # how many games?
+        winners = {}; winners["1"]=0; winners["-1"]=0; # Collecting stats of the games
+        print('Other Player playing agains random...')
+        for s in range(nGames): 
+            winner = play_a_game(0,modelPlayerOne,modelPlayerOther,commentary=False,randomAgent=True)
+            winners[str(winner)] += 1
+        dataP2.append(winners["1"])
+        print("Out of", nGames, "games,")
+        print("playerOther", 1, "won", winners["1"],"times and")
+        print("Random", -1, "won", winners["-1"],"times")
+        endA = time.time()
+        print("timi á run nr. ", a, ' tok:', (endA-startA), " sec")
     
     end = time.time()
     print(end - start)
-    plt.plot(range(len(data)), data, 'r')
+    plt.plot(range(len(dataP1)), dataP1, 'r')
+    plt.plot(range(len(dataP2)), dataP2, 'b')
     plt.show()
 
 if __name__ == '__main__':
