@@ -86,8 +86,8 @@ def action(board_copy,dice,player,i,model):
     #model.xtheta = xtheta_mean
     if(actionCount > 0):
         model.updateNeural(after_state)
-    #if(actionCount > 1):
-    #    model.dynaUpdate()
+    if(actionCount > 1):
+        model.dynaUpdate()
 
     actionCount += 1
 

@@ -3,6 +3,7 @@ import torch
 from torch.autograd import Variable
 import agent
 import numpy as np
+import random
 
 class Model:
     def __init__(self,_player,useTrained,loadtrainstep,_lambda,_alpha):
@@ -31,7 +32,7 @@ class Model:
         self.theta = 0.01*torch.ones((1,40), device=self.device,dtype = torch.float)
         self.alpha_th = 0.0001
         self.xtheta = 0.0001
-        self.dynaModel = []
+        self.dynaModel = {}
 
     def gameFinishedUpdate(self,winner):
         reward = 1 if winner == self.player else 0
@@ -40,7 +41,7 @@ class Model:
         gamma = 1
         
         #self.dynaModel.append([self.xold, reward])
-        self.dynaModel = self.dynaModel[:] + [[0, self.xold, reward, 0]]
+        self.dynaModel[self.xold] = [[0, self.xold, reward, 0]]
         
         h = torch.mm(self.w1,self.xold) + self.b1 # matrix-multiply x with input weight w1 and add bias
         h_sigmoid = h.sigmoid() # squash this with a sigmoid function
@@ -80,7 +81,7 @@ class Model:
         # here we have player 2 updating the neural-network (2 layer feed forward with Sigmoid units)
         x = Variable(torch.tensor(agent.one_hot_encoding(after_state), dtype = torch.float, device = self.device)).view(28*31,1)
         #self.dynaModel.append([x, 0])
-        self.dynaModel = self.dynaModel[:] + [[x, self.xold, 0, 1]]
+        self.dynaModel[self.xold] = [[x, self.xold, 0, 1]]
         # now do a forward pass to evaluate the new board's after-state value
         h = torch.mm(self.w1,x) + self.b1 # matrix-multiply x with input weight w1 and add bias
         h_sigmoid = h.sigmoid() # squash this with a sigmoid function
@@ -123,16 +124,17 @@ class Model:
     def dynaUpdate(self):
         gamma = 1
         #print(len(self.dynaModel))
-        
+    
         for dyna in range(10):
-            ran = np.random.randint(len(self.dynaModel))
-            
+            #ran = random.choice(self.dynaModel.items())
+            i = random.randint(0, len(self.dynaModel) - 1)
+            rand = self.dynaModel[list(self.dynaModel)[i]]
             #print(len(self.dynaModel[ran]))
-            
-            x = self.dynaModel[ran][0]
-            xold = self.dynaModel[ran][1]
-            reward = self.dynaModel[ran][2]
-            updateOrGamefinished = self.dynaModel[ran][3]
+            ran = rand[0]
+            x = ran[0]
+            xold = ran[1]
+            reward = ran[2]
+            updateOrGamefinished = ran[3]
             
             if (updateOrGamefinished == 0):
                 h = torch.mm(self.w1,xold) + self.b1 # matrix-multiply x with input weight w1 and add bias

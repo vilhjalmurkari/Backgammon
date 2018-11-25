@@ -299,6 +299,8 @@ def main():
         nGames = 100 # how many games?
         winners = {}; winners["1"]=0; winners["-1"]=0; # Collecting stats of the games
         print('Player One playing against random...')
+        print('Length of dynaModel dict P1', len(modelPlayerOne.dynaModel))
+        print('Length of dynaModel dict POther', len(modelPlayerOther.dynaModel))
         for g in range(nGames):   
             winner = play_a_game(1,modelPlayerOne,modelPlayerOther,commentary=False,randomAgent=True)
             winners[str(winner)] += 1
