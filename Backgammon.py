@@ -265,7 +265,9 @@ def play_a_game(modelPlayer,modelPlayerOne,modelPlayerOther,commentary = False,r
         player = -player
 
     modelPlayerOne.gameFinishedUpdate(-1*player)
+    modelPlayerOne.dynaUpdate()
     modelPlayerOther.gameFinishedUpdate(-1*player)
+    modelPlayerOther.dynaUpdate()
         #if(game_over(board)):
          #   pretty_print(board)
     # return the winner
@@ -276,8 +278,8 @@ dataP2 = []
 def main():
     import time
     start = time.time()
-    modelPlayerOne = Model.Model(1,True,14000,0.9,0.001)
-    modelPlayerOther = Model.Model(-1,True,14000,0.9,0.001)
+    modelPlayerOne = Model.Model(1,False,14000,0.9,0.001)
+    modelPlayerOther = Model.Model(-1,False,14000,0.9,0.001)
     totalTrained = 0
     for a in range(50):
         startA = time.time()
@@ -326,4 +328,11 @@ def main():
     plt.show()
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print 'Interrupted'
+        plt.plot(range(len(dataP1)), dataP1, 'r')
+        plt.plot(range(len(dataP2)), dataP2, 'b')
+        plt.show()
+        sys.exit(0)
